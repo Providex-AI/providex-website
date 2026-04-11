@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Providex Marketing Website
 
-## Getting Started
+Marketing website for Providex — the accountability layer for AI agents in production.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+  page.tsx              # Home
+  product/page.tsx      # Product (SDK + Dashboard + Pricing)
+  use-cases/page.tsx    # Use Cases (Engineers, Compliance, Security)
+  blog/
+    page.tsx            # Blog index
+    [slug]/page.tsx     # Blog post
+  design-partners/      # Design partner program + application form
+  about/page.tsx        # About + mission + team
+  sitemap.ts            # Auto-generated sitemap
+  robots.ts             # Robots.txt
+components/
+  ui/                   # Button, Card, Badge, CodeBlock, SectionWrapper
+  layout/               # Navbar, Footer
+content/
+  blog/                 # MDX blog posts
+lib/
+  blog.ts               # Blog utilities (frontmatter parsing, etc.)
+```
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 16** with App Router
+- **Tailwind CSS v4** for styling
+- **MDX** for blog posts (via gray-matter + custom renderer)
+- **TypeScript** throughout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Adding Blog Posts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a new `.mdx` file in `content/blog/`:
 
-## Deploy on Vercel
+```mdx
+---
+title: "Your Post Title"
+description: "A brief description for SEO and previews."
+date: "2026-04-01"
+author: "Your Name"
+tags: ["tag1", "tag2"]
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Your content here. Supports **bold**, *italic*, `code`, and [links](/).
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Analytics
+
+Analytics snippets (Plausible and PostHog) are included in `app/layout.tsx` as comments. Uncomment and configure to activate. The site is cookie-free by default.
+
+## Deployment
+
+```bash
+npm run build
+npm start
+```
+
+Deploy to Vercel, Netlify, or any Node.js hosting provider.
