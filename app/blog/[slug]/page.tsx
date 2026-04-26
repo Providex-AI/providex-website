@@ -3,8 +3,50 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CodeBlock } from "@/components/ui/CodeBlock";
 import { SectionWrapper } from "@/components/ui/SectionWrapper";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
+
+type ContentBlock =
+  | { kind: "code"; code: string; language?: string }
+  | { kind: "text"; text: string };
+
+function parseContentBlocks(content: string): ContentBlock[] {
+  const blocks: ContentBlock[] = [];
+  const lines = content.split("\n");
+  let buffer: string[] = [];
+
+  const flushText = () => {
+    const joined = buffer.join("\n");
+    buffer = [];
+    joined.split(/\n\n+/).forEach((chunk) => {
+      const trimmed = chunk.trim();
+      if (trimmed) blocks.push({ kind: "text", text: trimmed });
+    });
+  };
+
+  let i = 0;
+  while (i < lines.length) {
+    const fenceMatch = lines[i].match(/^```(\w*)\s*$/);
+    if (fenceMatch) {
+      flushText();
+      const language = fenceMatch[1] || undefined;
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing fence
+      blocks.push({ kind: "code", code: codeLines.join("\n"), language });
+    } else {
+      buffer.push(lines[i]);
+      i++;
+    }
+  }
+  flushText();
+  return blocks;
+}
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -94,9 +136,16 @@ export default async function BlogPostPage({ params }: Props) {
       <SectionWrapper className="bg-white">
         <article className="max-w-3xl mx-auto prose prose-lg prose-slate prose-headings:font-bold prose-headings:tracking-tight prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:bg-surface prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-strong:text-text-primary prose-li:text-text-muted prose-p:text-text-muted prose-p:leading-relaxed">
           {/* Render MDX content as HTML-like paragraphs */}
-          {post.content.split("\n\n").map((block, i) => {
-            const trimmed = block.trim();
-            if (!trimmed) return null;
+          {parseContentBlocks(post.content).map((block, i) => {
+            if (block.kind === "code") {
+              return (
+                <div key={i} className="not-prose my-6">
+                  <CodeBlock code={block.code} language={block.language || "text"} />
+                </div>
+              );
+            }
+
+            const trimmed = block.text;
 
             if (trimmed.startsWith("## ")) {
               return (
