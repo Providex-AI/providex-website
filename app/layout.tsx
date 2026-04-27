@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://getprovidex.com"),
   title: {
     default: "Providex — Provenance. Authorization. Accountability.",
     template: "%s | Providex",
@@ -24,6 +25,9 @@ export const metadata: Metadata = {
     "agentic AI governance",
   ],
   authors: [{ name: "Providex" }],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -45,6 +49,35 @@ export const metadata: Metadata = {
   },
 };
 
+const SITE_URL = "https://getprovidex.com";
+
+const organizationLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Providex",
+  url: SITE_URL,
+  logo: `${SITE_URL}/opengraph-image`,
+  description:
+    "The accountability platform for AI agents in production. Tamper-evident provenance logging, authorization audit trails, and compliance intelligence.",
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      email: "info@getprovidex.com",
+      contactType: "customer support",
+      areaServed: "Worldwide",
+      availableLanguage: ["English"],
+    },
+  ],
+};
+
+const websiteLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Providex",
+  url: SITE_URL,
+  publisher: { "@type": "Organization", name: "Providex" },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -62,6 +95,14 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
         />
         {/* Analytics placeholder — uncomment to activate Plausible */}
         {/* <script defer data-domain="getprovidex.com" src="https://plausible.io/js/script.js"></script> */}

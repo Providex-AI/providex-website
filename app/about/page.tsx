@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "About",
   description:
     "Providex is building the accountability layer for AI agents in production. Meet the team and learn why we started.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {

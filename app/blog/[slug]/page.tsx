@@ -65,12 +65,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.title,
     description: post.description,
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
       type: "article",
       publishedTime: post.date,
       authors: [post.author],
+      url: `/blog/${slug}`,
     },
   };
 }
@@ -83,8 +85,36 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
+  const blogPostingLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    dateModified: post.date,
+    author: { "@type": "Organization", name: post.author },
+    publisher: {
+      "@type": "Organization",
+      name: "Providex",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://getprovidex.com/opengraph-image",
+      },
+    },
+    keywords: post.tags.join(", "),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://getprovidex.com/blog/${slug}`,
+    },
+    url: `https://getprovidex.com/blog/${slug}`,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingLd) }}
+      />
       {/* Hero */}
       <section className="bg-navy pt-28 pb-16 grid-pattern">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">

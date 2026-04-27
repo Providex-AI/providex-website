@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Use Cases",
   description:
     "How ML engineers, compliance officers, and CISOs use Providex for AI agent governance, audit readiness, and incident forensics.",
+  alternates: { canonical: "/use-cases" },
 };
 
 export default function UseCasesPage() {

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Blog",
   description:
     "Insights on AI agent governance, compliance, provenance logging, and the accountability gap.",
+  alternates: { canonical: "/blog" },
 };
 
 export default function BlogPage() {

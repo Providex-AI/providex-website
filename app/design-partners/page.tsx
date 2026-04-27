@@ -293,6 +293,7 @@ export default function DesignPartnersPage() {
                       id="name"
                       name="name"
                       required
+                      autoComplete="name"
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
@@ -311,6 +312,8 @@ export default function DesignPartnersPage() {
                       id="email"
                       name="email"
                       required
+                      autoComplete="email"
+                      inputMode="email"
                       value={formData.email}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
@@ -332,6 +335,7 @@ export default function DesignPartnersPage() {
                       id="company"
                       name="company"
                       required
+                      autoComplete="organization"
                       value={formData.company}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
@@ -350,6 +354,7 @@ export default function DesignPartnersPage() {
                       id="role"
                       name="role"
                       required
+                      autoComplete="organization-title"
                       value={formData.role}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"

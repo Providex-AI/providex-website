@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Product",
   description:
     "Providex SDK and compliance dashboard. Provenance logging for AI agents with < 5ms overhead and one-click audit reports.",
+  alternates: { canonical: "/product" },
 };
 
 const decoratorSnippet = `from providex import trace, authorize

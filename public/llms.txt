@@ -1,0 +1,32 @@
+# Providex
+
+> Providex is the accountability platform for AI agents in production. We provide tamper-evident provenance logging, authorization audit trails, and compliance intelligence for teams shipping agentic AI under SOC 2, HIPAA, and the EU AI Act.
+
+Providex installs as an SDK in your agent pipeline (LangGraph, CrewAI, AutoGen, LangChain, LlamaIndex, or custom) and emits cryptographically verifiable records of every tool call, authorization decision, and data access. The dashboard turns those records into one-click audit reports and incident forensics.
+
+## Product
+
+- [Product overview](https://getprovidex.com/product): SDK capabilities, dashboard features, integration snippets, and the < 5ms overhead claim.
+- [Use cases](https://getprovidex.com/use-cases): How ML engineers, compliance officers, and CISOs use Providex for governance, audit readiness, and incident forensics.
+- [Design partner program](https://getprovidex.com/design-partners): 10-company early-access program with free Pro tier, founder access, and roadmap influence. Has a public application form at `/api/design-partners` (POST JSON).
+
+## Company
+
+- [About](https://getprovidex.com/about): Why we started Providex and who is building it.
+
+## Writing
+
+- [Blog index](https://getprovidex.com/blog): All posts on AI agent governance, compliance, and the accountability gap.
+- [Why your AI agent has no alibi](https://getprovidex.com/blog/why-your-ai-agent-has-no-alibi): Part 1 of the agentic governance series — the accountability gap in production AI agents.
+- [Deep dive into policy-as-code](https://getprovidex.com/blog/deep-dive-into-policy-as-code): Part 2 of the series — OPA, Cedar, and how policy-as-code works for agentic AI.
+
+## Contact
+
+- General: info@getprovidex.com
+- Outreach: outreach@getprovidex.com
+- Founders: founders@getprovidex.com
+
+## Machine-readable indexes
+
+- [Sitemap](https://getprovidex.com/sitemap.xml)
+- [robots.txt](https://getprovidex.com/robots.txt)
