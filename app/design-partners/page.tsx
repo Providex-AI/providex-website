@@ -8,6 +8,8 @@ import { SectionWrapper } from "@/components/ui/SectionWrapper";
 
 export default function DesignPartnersPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -16,13 +18,36 @@ export default function DesignPartnersPage() {
     framework: "",
     useCase: "",
     consent: false,
+    // Honeypot — must stay empty. Hidden from real users via CSS + aria.
+    website: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to Formspree or backend
-    console.log("Design partner application:", formData);
-    setSubmitted(true);
+    setErrorMessage(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/design-partners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(data.error || "Submission failed");
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -229,6 +254,32 @@ export default function DesignPartnersPage() {
           ) : (
             <Card>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot: hidden from real users, bots auto-fill it. */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "-9999px",
+                    top: "-9999px",
+                    height: 0,
+                    width: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  <label htmlFor="website">
+                    Leave this field empty
+                    <input
+                      type="text"
+                      id="website"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={formData.website}
+                      onChange={handleChange}
+                    />
+                  </label>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div>
                     <label
@@ -371,8 +422,22 @@ export default function DesignPartnersPage() {
                   </label>
                 </div>
 
-                <Button type="submit" size="lg" className="w-full">
-                  Submit Application
+                {errorMessage && (
+                  <div
+                    role="alert"
+                    className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning"
+                  >
+                    {errorMessage}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={submitting}
+                >
+                  {submitting ? "Submitting…" : "Submit Application"}
                 </Button>
               </form>
             </Card>
