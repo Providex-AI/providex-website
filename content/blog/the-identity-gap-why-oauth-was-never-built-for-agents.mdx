@@ -1,0 +1,132 @@
+---
+title: "The Identity Gap: Why OAuth Was Never Built for Agents"
+description: "OAuth was designed for humans clicking buttons in browsers. Autonomous agents need short-lived cryptographic identities, scoped delegation, and policy-bound context — not master keys. Here's the architecture that closes the gap."
+date: "2026-05-04"
+author: "Providex Team"
+tags: ["AI governance", "identity", "SPIFFE", "RFC 8693", "OAuth", "zero trust", "agentic AI"]
+---
+
+OAuth 2.0 is one of the most successful protocols in internet history, but it was built on a fundamental assumption: there is a human in the loop. We designed it for "User-Present" transactions, where a person clicks a button to authorize a specific, transient action.
+
+OAuth tokens act as "hand-off" credentials, meaning that once an agent possesses a token, it effectively becomes the user. Consequently, if that agent is compromised through prompt injection, the attacker assumes the user's identity. This creates a significant security risk, as demonstrated by the Vercel/Context.ai breach (more on this later). In this incident, an employee granted a third-party AI tool overly broad "Allow All" permissions, failing to grasp the potential blast radius.
+
+Today, we are handing those same high-privilege keys to autonomous agents that run 24/7, across multi-agent loops, with full scope and access rights when we click "Grant Access" on an agent request to an app or service. When we do this, we are operating under a human fallacy: the belief that the agent is an extension of our own intent. But agents don't have intent — they have execution loops. Unlike static applications with fixed, pre-registered capabilities, AI agents are dynamic. They discover resources on the fly and chain various tool calls mid-task, often requiring a complex mix of credentials — such as OAuth for Google Drive, API keys for data warehouses, and separate tokens for LLMs. Each step in these agentic workflows crosses a trust boundary involving diverse credential types, varied lifetimes, and disparate audit trails.
+
+By using OAuth to grant them our identity, we aren't just giving them a tool; we are giving them our entire blast radius, permanently. It's time to stop treating autonomous agents like humans in a web browser and start treating them like the high-privilege workloads they actually are. The April 2026 Vercel security breach is a good example of this. If you are not caught up, here is a brief account of what happened:
+
+- **Initial compromise:** Context.ai, a third-party tool used by a Vercel employee, was compromised during a February 2026 malware attack, harvesting a Context.ai employee's workspace credentials.
+- **OAuth app takeover:** Attackers used those credentials to compromise Context.ai's Google Workspace OAuth application.
+- **"Allow All" pivot:** A Vercel employee used their corporate account to sign up for Context.ai's AI workflow solutions and granted it "Allow All" permissions. Using the compromised OAuth app, the attacker took over the employee's individual Vercel Google Workspace account, which gave them access to that employee's Vercel account.
+- **Lateral movement:** From there, the attacker pivoted into a Vercel environment, maneuvering through systems to access non-sensitive environment variables (API keys, tokens, and database credentials).
+- **Extortion:** The attacker later posted on a hacking forum the stolen data — including source code, API keys, and employee records — demanding a $2M ransom.
+
+The Vercel incident serves as a critical case study, illustrating the fundamental mismatch between legacy security protocols and the requirements of modern autonomous systems, as the following post-mortem details.
+
+## The Post Mortem
+
+While the initial response to the Vercel security incident focused on tactical errors — like failing to rotate tokens or properly downscope OAuth permissions — the event reveals a much more profound issue. Beneath the surface of what appeared to be a standard breach lies a fundamental mismatch between legacy security protocols and modern autonomous systems.
+
+The original design of OAuth dates back to 2006, intended for human users interacting via browsers rather than autonomous agents. This legacy authorization model is built on a specific interaction: a person grants a third-party application access to their data. Crucially, the system assumes the application acts on behalf of a human who is present to provide or deny authorization for tokens issued with defined scopes. These traditional interaction models fail to account for autonomous agents, which operate headlessly in environments like servers and containers without user-facing OAuth consent screens for runtime authorization. This lack of human oversight is a growing security concern; GitGuardian's 2026 report indicates that AI-assisted code leaks secrets at more than twice the rate of standard commits. Specifically, Claude Code-assisted contributions demonstrated a 3.2% leak rate, compared to a 1.5% baseline for all public GitHub commits. This compounding credential exposure implicitly confirms that the legacy authorization framework cannot contain the scaling threat surface generated by dynamic, autonomous workloads.
+
+In the current architecture, the central vulnerability is not the autonomous capability of the agent itself, but rather the underlying credential management system. When a user authorizes an agent to access a specific resource, the system often issues a high-privilege master key rather than a restricted, single-use token. This allows the agent to move throughout the environment with excessive permissions. The attacker exploited this expansive OAuth scope to impersonate the employee and navigate their enterprise environment. Current security monitoring typically focuses on human-initiated logins within governed systems like Google Workspace. However, there is a significant lack of visibility into the secondary actions performed by agents using delegated credentials to access sensitive internal infrastructure such as filtration controls or financial systems.
+
+The Vercel compromise was identified through activity in the employee's Google Workspace account, yet the specific token utilized remained invisible to the security team until after the breach. This highlights a critical oversight: monitoring strategies are currently optimized for human users rather than autonomous agent workloads.
+
+## The Fix: Agent-First Identity
+
+The visibility crisis is stark: most enterprises lack a definitive inventory of the AI agents connected to their systems, the extent of their permissions, or the specific OAuth applications they have authorized. A 2026 survey found that only 24.4% of organizations possess comprehensive visibility into their autonomous agent landscape. Currently, the average enterprise operates 37 deployed agents, with 74% intending to expand their deployment within two years. The inventory problem is unsolved: most enterprises cannot answer "which agents are running, with what permissions, right now."
+
+To address the agent identity gap, we need to move from long-lived static secrets (API keys, passwords) to short-lived cryptographic identities that dynamically request scoped access tokens, allowing workloads to act on behalf of users or other workloads when necessary.
+
+The combination of **SPIFFE/Workload Identity**, **Token Exchange (RFC 8693)**, and **Just-in-Time (JIT) Delegation** forms a modern, zero-trust security architecture for service-to-service authentication and authorization.
+
+### 1. SPIFFE / Workload Identity (The "Who")
+
+SPIFFE (Secure Production Identity Framework for Everyone) provides a universal, standard way to identify software workloads — microservices, containers, functions — running in dynamic, heterogeneous environments. It comprises these functionalities:
+
+- **SPIFFE ID:** A unique URI-based identity (e.g., `spiffe://acme.com/billing/payments`).
+- **SVID (SPIFFE Verifiable Identity Document):** A cryptographically signed document that carries the SPIFFE ID. SVIDs can be X.509 certificates or JWTs, each tied to a unique `spiffe://trust-domain/service` identifier.
+- **SPIRE (the implementation):** SPIRE (SPIFFE Runtime Environment) acts as the control plane, attesting the workload's environment (e.g., Kubernetes service account) and issuing short-lived SVIDs.
+- **Attestation:** SPIRE verifies that a workload is exactly what it claims to be before issuing an SVID.
+
+### 2. Token Exchange — RFC 8693 (The "How")
+
+RFC 8693 defines a standardized method for a client (workload) to present an existing token (the "subject token") to an OAuth 2.0 Authorization Server to obtain a new, potentially down-scoped token tailored for a specific downstream API.
+
+- **Keyless authentication:** Workloads use their SPIFFE JWT-SVID (subject token) to authenticate to an OAuth server without needing a client secret.
+- **"Token-at-hand":** The workload presents its SVID, and the server validates it (trusting the SPIRE issuer) and exchanges it for a new token with specific audiences, scopes, or lifetimes.
+- **Context preservation:** It enables passing on-behalf-of (OBO) information, maintaining an audit trail of which service is acting for whom.
+
+### 3. Just-in-Time (JIT) Delegation (The "When")
+
+JIT Delegation allows a workload to request permissions or tokens only when needed rather than possessing highly privileged tokens permanently.
+
+- **Dynamic scoping:** Instead of a service having a "super admin" token, it uses JIT to request a "read-only" token for a specific 5-minute transaction.
+- **Impersonation:** The client totally assumes the identity of another party.
+- **Delegation (act-as):** The client retains its own identity while acting on behalf of another party, using the JWT `act` claim.
+- **Security benefit:** Reduces the blast radius of a compromised service because tokens are short-lived, narrowly scoped, and dynamically issued.
+
+### Combined Architecture Flow: Secretless Service-to-Service
+
+<img src="/blog/diagram-01-spiffe-rfc8693-jit-architecture.svg" alt="SPIFFE, RFC 8693, and JIT delegation architecture" width="100%" style="max-width:800px;" />
+
+The diagram above illustrates how the three components — SPIFFE/Workload Identity, Token Exchange, and JIT Delegation — coalesce to form a secretless, zero-trust authentication chain. The flow begins with a workload attesting its identity to SPIRE, then leveraging that cryptographic ID to dynamically secure a short-lived, narrowly scoped access token tailored for a specific downstream request. This ensures all service-to-service communication remains strictly time-bound and identity-aware.
+
+Unlike a static API key, a combined SPIFFE + RFC 8693 + JIT architecture eliminates the need for static OAuth tokens because none are required to start the authentication chain, while a JWT-SVID cannot be reused outside the attested workload environment. Furthermore, the use of the JWT `act` claim provides a stronger audit trail of delegation, while SPIFFE federation establishes seamless trust across diverse cloud and on-premises environments.
+
+## The Triad of Trust: How Providex Closes the Identity Gap
+
+The SPIFFE + RFC 8693 + JIT architecture described above solves the *credential* problem. But there is a second, equally dangerous gap that it does not close: once an agent has a valid token, nothing in that stack verifies *what the agent is about to do with it*, or *whether that action is consistent with the policy governing the principal it represents*. A legitimately attested agent with a legitimately issued OBO token can still move money to the wrong account, exfiltrate data to an authorized-but-inappropriate destination, or chain tool calls in ways no human ever approved. The token proves the agent is who it claims to be. It does not prove the agent is doing what it should.
+
+This is the accountability gap that Providex addresses — and it does so by treating identity and policy not as separate concerns bolted together at the last moment, but as a unified accountability infrastructure with a single shared context object at its center.
+
+Providex's approach is organized around three enforced layers — **Provenance Attestation**, **On-Behalf-Of Identity**, and **Policy-as-Code Evaluation** — which together form what we call the **Triad of Trust**.
+
+### Layer 1 — Provenance Attestation: Verifying the Agent Itself
+
+Before any token is issued or any policy is evaluated, Providex first establishes *what* the agent is. In practice, this means consuming the client's SPIFFE SVID at runtime — the cryptographically signed workload identity issued by SPIRE — and enriching it with Providex's own provenance metadata.
+
+Specifically, Providex derives a `provenance_hash` from a combination of the agent's registered attributes, which may include its `prompt_template`, `tool_manifest`, `model_version`, `risk_classification`, and SVID. This composite hash is assembled deterministically at attestation time based on the agent's registry entry and the targeted use case. No two agent configurations produce the same hash, and any drift from the registered baseline produces a hash mismatch that blocks token issuance.
+
+This is not just logging — it is pre-authorization attestation. An agent whose SVID cannot be matched against a registered Providex agent record does not proceed. The attestation step closes the first half of the Vercel-class attack surface: a compromised third-party tool with a valid OAuth grant but no registered workload identity fails at the gate, before it ever touches a downstream credential.
+
+### Layer 2 — OBO Token Binding: Preserving the Delegation Chain
+
+Once the agent's workload identity is attested, Providex maps it to an On-Behalf-Of token that carries the full context of the principal the agent represents. Grounded in RFC 8693's `act` claim semantics, the Providex OBO token is not simply an access token — it is a context-bearing artifact that encodes both the delegating principal (`sub`: the user or upstream service) and the acting agent (`act.sub`: the attested workload identity).
+
+This means every subsequent action is attributable to a specific agent acting on behalf of a specific principal under a specific session — not to an anonymous OAuth grant with "Allow All" scope. The delegation chain is explicit, tamper-evident, and short-lived. There is no persistent credential that can be harvested and replayed. An attacker who intercepts the OBO token gets a scoped, time-boxed artifact that is valid for one audience, one action window, and one session — and whose `act.sub` claim ties it cryptographically to the attested workload that requested it.
+
+The authorization server that issues the OBO token — whether that is a customer's existing IdP (Entra ID, Okta) configured for RFC 8693, or a Providex-managed STS — validates the incoming SVID against the SPIRE trust bundle before issuing. Providex sits above this layer, consuming the output. Customers do not need to replace their identity infrastructure; they integrate Providex into the layer above it.
+
+### Layer 3 — Policy-as-Code Evaluation Against Verified Context
+
+Only at this point, with a verified workload identity and a context-bearing OBO token in hand, does Providex evaluate the proposed action against policy. The PaC layer (OPA/Cedar) does not receive a simple `{action, resource}` tuple. It receives a fully enriched **Context Object** assembled by the Identity Layer, which carries every field needed to make a governance-grade decision.
+
+<img src="/blog/diagram-02-providex-triad-context-object.svg" alt="Providex Triad of Trust and Context Object architecture" width="100%" style="max-width:800px;" />
+
+The policy engine evaluates this full object and returns one of three outcomes:
+
+- **Permit:** The action executes and the Context Object is logged as the supporting evidence record.
+- **Deny:** The action is blocked, and the denial reason is structured and returned to the agent as a hard constraint for re-planning.
+- **Obligation:** The action is conditionally permitted subject to an additional requirement — human-in-the-loop approval, enhanced logging, scope restriction, or some combination. For example, a transfer above $50,000 is conditionally permitted but requires Compliance Officer approval before execution, with the full Context Object attached to the approval request.
+
+The policy engine's outcome is logged with the full Context Object as the audit artifact. This means every enforcement decision is not just a runtime guardrail — it is a legally defensible record of what the agent was permitted to do, under which verified identity, against which policy version, at which point in time.
+
+## Why Sequencing Is the Architecture
+
+The key insight in the Triad of Trust is not any individual component — it is the enforced sequencing: attestation before identity binding, identity binding before policy evaluation. Each layer's output becomes the next layer's verified input. No layer can be bypassed without breaking the chain.
+
+This sequencing is what distinguishes Providex from a policy engine with an identity plugin bolted on. In a conventional setup, the Policy Decision Point (PDP) receives whatever context the calling application chooses to send. In the Triad of Trust, the Context Object is assembled and signed by the Identity Layer — not by the application, not by the agent, and not by the user. The policy engine can trust every field it receives because none of them originate from an unverified source.
+
+The result is what we mean when we say identity and policy are unified accountability infrastructure: not two tools that share a data format, but a single chain in which proving who the agent is and proving what it is allowed to do are steps in the same verifiable sequence.
+
+The Vercel security breach serves as a stark reminder that we can no longer afford to operate under the dangerous assumption that autonomous agents can be governed by legacy protocols designed for humans in a browser. While technologies like SPIFFE, RFC 8693, and Just-in-Time Delegation provide the necessary cryptographic foundation to solve the credential problem, they are only the beginning. True accountability requires more than just a verified token; it requires a unified infrastructure where Provenance Attestation, Identity Binding, and Policy Evaluation are woven into a single, unbreakable chain. By treating identity and policy as an orchestrated sequence rather than fragmented layers, Providex AI ensures that every agentic action is not only authenticated but is also a legally defensible record of permitted intent. As we move into an era of increasingly complex autonomous loops, closing the Identity Gap isn't just a security best practice — it is the baseline for deploying AI that the world can actually trust.
+
+---
+
+## What's Next in the Agentic Governance Series
+
+This is Part 3 of our multi-part series on the infrastructure required to safely deploy autonomous agents in production. Coming up:
+
+- **Part 4 | Orchestrating Accountability:** Governance strategies for multi-agent systems (MAS) and complex autonomous loops.
+- **Part 5 | Compliance by Design:** A technical mapping of regulatory standards such as the EU AI Act and NIST RMF to specific product features.
